@@ -11,7 +11,7 @@ Gentle Drift is a collection of slow, restorative natural movements for the brow
 <p>
   <a href="https://gentle-drift.pages.dev"><strong>Try the web experience</strong></a>
   &nbsp;·&nbsp;
-  <a href="../../releases/latest"><strong>Download for Windows</strong></a>
+  <a href="https://github.com/NAO-YA/gentle-drift/releases/latest"><strong>Download for Windows</strong></a>
 </p>
 
 ## Why Gentle Drift
@@ -30,7 +30,7 @@ The Windows edition is a native WPF host that renders the shared Canvas experien
 - An interactive settings window for selecting a scene, palette, amount, and motion
 - Mouse movement or any key returns from the screen saver
 
-Download the latest Windows ZIP from [Releases](../../releases/latest), extract it to a permanent folder, right-click `GentleDrift.scr`, and choose **Install**. Then select Gentle Drift in Windows Screen Saver Settings.
+Download the latest Windows ZIP from [Releases](https://github.com/NAO-YA/gentle-drift/releases/latest), extract it to a permanent folder, right-click `GentleDrift.scr`, and choose **Install**. Then select Gentle Drift in Windows Screen Saver Settings.
 
 ## Project layout
 
