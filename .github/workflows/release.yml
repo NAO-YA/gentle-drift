@@ -1,0 +1,45 @@
+name: Build Windows screen saver release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish the native host
+        run: >
+          dotnet publish _src/windows-screensaver/GentleDrift.ScreenSaver.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -o publish
+      - name: Package the .scr release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release/GentleDrift | Out-Null
+          Copy-Item publish/* release/GentleDrift -Recurse
+          Copy-Item release/GentleDrift/GentleDrift.exe release/GentleDrift/GentleDrift.scr
+          Remove-Item release/GentleDrift/GentleDrift.exe
+          @'
+          Gentle Drift for Windows
+
+          1. Extract this folder to a permanent location.
+          2. Right-click GentleDrift.scr and choose Install.
+          3. Select Gentle Drift in Windows Screen Saver Settings.
+
+          Open GentleDrift.scr normally to adjust Scene, Palette, Amount, and Motion.
+          '@ | Set-Content release/GentleDrift/INSTALL.txt
+          Compress-Archive -Path release/GentleDrift/* -DestinationPath release/GentleDrift-Windows-x64.zip
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create ${{ github.ref_name }} release/GentleDrift-Windows-x64.zip --generate-notes --title "Gentle Drift ${{ github.ref_name }}"

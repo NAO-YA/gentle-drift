@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A quiet place for slow-moving natural scenes." />
+  <title>Gentle Drift</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+      --canvas: #101210;
+      --ink: #edf1eb;
+      --muted: rgb(238 243 235 / 78%);
+      --border: rgb(220 235 218 / 14%);
+      --surface: rgb(18 22 19 / 70%);
+      --accent: #a7c59e;
+      background: var(--canvas);
+      color: var(--ink);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      display: grid;
+      min-width: 320px;
+      min-height: 100svh;
+      margin: 0;
+      place-items: center;
+      background:
+        radial-gradient(circle at 50% 42%, rgb(40 52 61 / 32%), transparent 70%),
+        var(--canvas);
+    }
+
+    main {
+      display: grid;
+      justify-items: center;
+      width: min(100% - 40px, 460px);
+      text-align: center;
+    }
+
+    .wordmark {
+      margin: 0 0 36px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .2em;
+    }
+
+    h1 {
+      max-width: 10ch;
+      margin: 0;
+      color: rgb(239 244 236 / 68%);
+      font-family: inherit;
+      font-size: clamp(30px, 6vw, 44px);
+      font-weight: 500;
+      line-height: 1.1;
+      letter-spacing: .08em;
+    }
+
+    .start {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 112px;
+      margin-top: 32px;
+      padding: 8px 12px;
+      border: 1px solid rgb(226 241 221 / 17%);
+      border-radius: 999px;
+      color: #eff5ed;
+      background: rgb(189 219 178 / 14%);
+      font-size: 13px;
+      letter-spacing: .04em;
+      text-decoration: none;
+      transition: background 180ms ease, color 180ms ease;
+    }
+
+    .start:hover { background: rgb(189 219 178 / 22%); }
+    .start:focus-visible { outline: 2px solid #b7d5ad; outline-offset: 4px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="wordmark">GENTLE DRIFT</p>
+    <h1>Make room for stillness.</h1>
+    <a class="start" href="./iyashi-no-yuragi/index.html?scene=water&palette=moon&amount=14&sway=1">Start</a>
+  </main>
+</body>
+</html>

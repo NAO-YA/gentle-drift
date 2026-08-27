@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gentle Drift</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+      --canvas: #101210;
+      --ink: #edf1eb;
+      --muted: rgb(238 243 235 / 78%);
+      --border: rgb(220 235 218 / 14%);
+      --surface: rgb(18 22 19 / 70%);
+      --accent: #a7c59e;
+      background: var(--canvas);
+      color: var(--ink);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      overflow: hidden;
+      background: var(--canvas);
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100svh;
+    }
+
+    .controls {
+      position: fixed;
+      z-index: 1;
+      left: 20px;
+      bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(124px, 1fr));
+      gap: 10px 12px;
+      width: min(392px, calc(100vw - 40px));
+      padding: 15px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: 0 12px 40px rgb(0 0 0 / 18%);
+      backdrop-filter: blur(14px);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: opacity 420ms ease, transform 420ms ease;
+    }
+
+    .controls.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .controls__title {
+      grid-column: 1 / -1;
+      margin: 0 0 2px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .08em;
+    }
+
+    label { display: grid; gap: 5px; color: rgb(235 241 233 / 78%); font-size: 12px; }
+    select, input, button { font: inherit; }
+
+    select {
+      width: 100%;
+      min-width: 0;
+      padding: 7px 9px;
+      border: 1px solid rgb(226 241 221 / 16%);
+      border-radius: 9px;
+      outline: none;
+      color: #edf1eb;
+      background: rgb(255 255 255 / 6%);
+    }
+
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+    .range-label { display: flex; align-items: baseline; justify-content: space-between; }
+    output { color: #c9dbc2; font-variant-numeric: tabular-nums; }
+
+    button {
+      grid-column: 1 / -1;
+      justify-self: start;
+      padding: 8px 12px;
+      border: 1px solid rgb(226 241 221 / 17%);
+      border-radius: 999px;
+      cursor: pointer;
+      color: #eff5ed;
+      background: rgb(189 219 178 / 14%);
+    }
+
+    button:hover { background: rgb(189 219 178 / 22%); }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #b7d5ad; outline-offset: 2px; }
+
+    .scene-name {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      margin: 0;
+      transform: translateX(-50%);
+      color: rgb(239 244 236 / 68%);
+      font-size: clamp(15px, 2vw, 19px);
+      font-weight: 500;
+      letter-spacing: .18em;
+      pointer-events: none;
+    }
+
+    body.is-screensaver .controls,
+    body.is-screensaver .scene-name { display: none; }
+
+    @media (max-width: 560px) {
+      .controls { left: 12px; bottom: 12px; width: calc(100vw - 24px); padding: 13px; }
+      .scene-name { top: 16px; }
+    }
+
+    @media (hover: none), (pointer: coarse) {
+      .controls {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stage" aria-label="A calm animation of gently moving natural scenes"></canvas>
+
+  <h1 class="scene-name" id="scene-name">Flame</h1>
+
+  <section class="controls" aria-label="Viewing controls">
+    <p class="controls__title">GENTLE DRIFT</p>
+    <label>
+      Scene
+      <select id="scene" aria-label="Choose a scene">
+        <option value="flame">Flame</option>
+        <option value="bamboo">Bamboo</option>
+        <option value="water">Water</option>
+        <option value="cloud">Clouds</option>
+        <option value="seaweed">Seaweed</option>
+        <option value="smoke">Incense Smoke</option>
+        <option value="sunlight">Dappled Light</option>
+        <option value="petals">Petals</option>
+        <option value="fireflies">Fireflies</option>
+        <option value="curtain">Curtain</option>
+      </select>
+    </label>
+    <label>
+      Palette
+      <select id="palette" aria-label="Choose a palette">
+        <option value="warm">Soft Glow</option>
+        <option value="sage">Deep Green</option>
+        <option value="moon">Moonlight</option>
+      </select>
+    </label>
+    <label>
+      <span class="range-label">Amount <output id="amount-value">14</output></span>
+      <input id="amount" type="range" min="6" max="28" value="14" />
+    </label>
+    <label>
+      <span class="range-label">Motion <output id="sway-value">Gentle</output></span>
+      <input id="sway" type="range" min="1" max="3" value="2" />
+    </label>
+    <button id="regenerate" type="button">New Scene</button>
+    <button id="enter-fullscreen" type="button">Enter Full Screen</button>
+    <button id="exit-fullscreen" type="button" hidden>Exit Full Screen</button>
+  </section>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.querySelector('#stage');
+      const context = canvas.getContext('2d');
+      const controls = document.querySelector('.controls');
+      const isScreenSaver = new URL(window.location.href).searchParams.get('screensaver') === '1';
+      const sceneSelect = document.querySelector('#scene');
+      const paletteSelect = document.querySelector('#palette');
+      const amountInput = document.querySelector('#amount');
+      const swayInput = document.querySelector('#sway');
+      const amountValue = document.querySelector('#amount-value');
+      const swayValue = document.querySelector('#sway-value');
+      const sceneName = document.querySelector('#scene-name');
+      const regenerateButton = document.querySelector('#regenerate');
+      const enterFullscreenButton = document.querySelector('#enter-fullscreen');
+      const exitFullscreenButton = document.querySelector('#exit-fullscreen');
+      const storageKey = 'iyashi-no-yuragi-settings';
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)');
+
+      document.body.classList.toggle('is-screensaver', isScreenSaver);
+
+      const sceneLabels = {
+        flame: 'Flame', bamboo: 'Bamboo', water: 'Water', cloud: 'Clouds', seaweed: 'Seaweed',
+        smoke: 'Incense Smoke', sunlight: 'Dappled Light', petals: 'Petals', fireflies: 'Fireflies', curtain: 'Curtain',
+      };
+
+      const palettes = {
+        warm: { primary: '#d7a36b', soft: '#f0d7b6', muted: '#7a5a40', shade: '#382c24' },
+        sage: { primary: '#90b488', soft: '#d0dfc8', muted: '#526b50', shade: '#26382b' },
+        moon: { primary: '#91b2c8', soft: '#d4e2ea', muted: '#526d7c', shade: '#28343d' },
+      };
+
+      let width = 0;
+      let height = 0;
+      let pixelRatio = 1;
+      let lastFrame = 0;
+      let elapsed = 0;
+      let seed = createSeed();
+      let random = createRandom(seed);
+      let objects = [];
+      let settings = readSettings();
+      let controlsTimer;
+
+      function createSeed() {
+        return Math.random().toString(36).slice(2, 10);
+      }
+
+      function hashSeed(value) {
+        let hash = 2166136261;
+        for (let index = 0; index < value.length; index += 1) {
+          hash ^= value.charCodeAt(index);
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+      }
+
+      function createRandom(value) {
+        let state = hashSeed(value);
+        return () => {
+          state += 0x6d2b79f5;
+          let result = state;
+          result = Math.imul(result ^ (result >>> 15), result | 1);
+          result ^= result + Math.imul(result ^ (result >>> 7), result | 61);
+          return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function between(min, max) { return min + random() * (max - min); }
+      function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
+      function rgba(hex, alpha) {
+        const value = hex.slice(1);
+        const red = Number.parseInt(value.slice(0, 2), 16);
+        const green = Number.parseInt(value.slice(2, 4), 16);
+        const blue = Number.parseInt(value.slice(4, 6), 16);
+        return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+      }
+
+      function readSettings() {
+        const defaults = { scene: 'flame', palette: 'warm', amount: 14, sway: 2 };
+        const url = new URL(window.location.href);
+        const fromUrl = {
+          scene: url.searchParams.get('scene'),
+          palette: url.searchParams.get('palette'),
+          amount: Number(url.searchParams.get('amount')),
+          sway: Number(url.searchParams.get('sway')),
+        };
+        try {
+          const stored = JSON.parse(localStorage.getItem(storageKey));
+          const loaded = { ...defaults, ...(stored || {}) };
+          return {
+            scene: sceneLabels[fromUrl.scene] ? fromUrl.scene : loaded.scene,
+            palette: palettes[fromUrl.palette] ? fromUrl.palette : loaded.palette,
+            amount: Number.isFinite(fromUrl.amount) && fromUrl.amount > 0 ? clamp(fromUrl.amount, 6, 28) : clamp(loaded.amount, 6, 28),
+            sway: Number.isFinite(fromUrl.sway) && fromUrl.sway > 0 ? clamp(fromUrl.sway, 1, 3) : clamp(loaded.sway, 1, 3),
+          };
+        } catch {
+          return defaults;
+        }
+      }
+
+      function saveSettings() {
+        localStorage.setItem(storageKey, JSON.stringify(settings));
+      }
+
+      function syncControls() {
+        sceneSelect.value = settings.scene;
+        paletteSelect.value = settings.palette;
+        amountInput.value = String(settings.amount);
+        swayInput.value = String(settings.sway);
+        amountValue.textContent = String(settings.amount);
+        swayValue.textContent = ['Still', 'Gentle', 'More movement'][settings.sway - 1];
+        sceneName.textContent = sceneLabels[settings.scene];
+      }
+
+      function showControls() {
+        window.clearTimeout(controlsTimer);
+        controls.classList.add('is-visible');
+      }
+
+      function hideControlsLater() {
+        if (coarsePointer.matches) return;
+        window.clearTimeout(controlsTimer);
+        controlsTimer = window.setTimeout(() => {
+          if (!controls.matches(':hover') && !controls.matches(':focus-within')) {
+            controls.classList.remove('is-visible');
+          }
+        }, 1800);
+      }
+
+      function applyControlsVisibility() {
+        if (coarsePointer.matches) showControls();
+        else controls.classList.remove('is-visible');
+      }
+
+      function syncFullscreenButtons() {
+        const isFullscreen = Boolean(document.fullscreenElement);
+        enterFullscreenButton.hidden = isFullscreen;
+        exitFullscreenButton.hidden = !isFullscreen;
+      }
+
+      async function enterFullscreen() {
+        try {
+          await document.documentElement.requestFullscreen();
+        } catch {
+          syncFullscreenButtons();
+        }
+      }
+
+      async function exitFullscreen() {
+        if (!document.fullscreenElement) return;
+        try {
+          await document.exitFullscreen();
+        } catch {
+          syncFullscreenButtons();
+        }
+      }
+
+      function resize() {
+        pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        prepareScene();
+      }
+
+      function prepareScene() {
+        random = createRandom(`${seed}-${settings.scene}-${settings.amount}`);
+        objects = sceneBuilders[settings.scene]();
+      }
+
+      function baseBackground(theme) {
+        context.fillStyle = '#101210';
+        context.fillRect(0, 0, width, height);
+        const glow = context.createRadialGradient(width * .5, height * .42, 0, width * .5, height * .42, Math.max(width, height) * .78);
+        glow.addColorStop(0, rgba(theme.shade, .32));
+        glow.addColorStop(1, 'rgba(16, 18, 16, 0)');
+        context.fillStyle = glow;
+        context.fillRect(0, 0, width, height);
+      }
+
+      function drawCurve(points, stroke, lineWidth) {
+        if (points.length < 2) return;
+        context.beginPath();
+        context.moveTo(points[0].x, points[0].y);
+        for (let index = 1; index < points.length - 1; index += 1) {
+          const midX = (points[index].x + points[index + 1].x) / 2;
+          const midY = (points[index].y + points[index + 1].y) / 2;
+          context.quadraticCurveTo(points[index].x, points[index].y, midX, midY);
+        }
+        const last = points[points.length - 1];
+        context.lineTo(last.x, last.y);
+        context.strokeStyle = stroke;
+        context.lineWidth = lineWidth;
+        context.stroke();
+      }
+
+      function drawPetal(x, y, size, angle, color, alpha) {
+        context.save();
+        context.translate(x, y);
+        context.rotate(angle);
+        context.beginPath();
+        context.moveTo(0, 0);
+        context.bezierCurveTo(size * .9, -size * .7, size * 1.05, size * .55, 0, size);
+        context.bezierCurveTo(-size * 1.05, size * .55, -size * .9, -size * .7, 0, 0);
+        context.fillStyle = rgba(color, alpha);
+        context.fill();
+        context.restore();
+      }
+
+      const sceneBuilders = {
+        flame() {
+          const count = Math.round(settings.amount * .72);
+          return Array.from({ length: count }, (_, index) => ({
+            x: ((index + .5) / count) * width + between(-28, 28),
+            y: height * between(.76, .92),
+            size: between(38, Math.min(width, height) * .14 + 42),
+            phase: between(0, Math.PI * 2),
+            speed: between(.42, .78),
+          }));
+        },
+        bamboo() {
+          const count = Math.max(5, Math.round(settings.amount * .62));
+          return Array.from({ length: count }, (_, index) => ({
+            x: ((index + .3) / count) * width + between(-35, 35),
+            height: between(height * .48, height * .9),
+            width: between(2, 5),
+            phase: between(0, Math.PI * 2),
+            leaves: Array.from({ length: 5 }, (_, leaf) => ({ progress: .22 + leaf * .14 + between(-.03, .03), side: leaf % 2 ? 1 : -1, size: between(32, 62) })),
+          }));
+        },
+        water() {
+          return Array.from({ length: Math.round(settings.amount * 1.35) }, (_, index) => ({
+            y: height * (.2 + (index / (settings.amount * 1.35)) * .72),
+            amplitude: between(4, 15),
+            frequency: between(.006, .015),
+            speed: between(.25, .62),
+            phase: between(0, Math.PI * 2),
+            alpha: between(.08, .28),
+          }));
+        },
+        cloud() {
+          return Array.from({ length: Math.max(5, Math.round(settings.amount * .48)) }, () => ({
+            x: between(-width * .2, width * 1.1),
+            y: between(height * .14, height * .78),
+            scale: between(.5, 1.35),
+            speed: between(2, 7),
+            phase: between(0, Math.PI * 2),
+            alpha: between(.08, .2),
+          }));
+        },
+        seaweed() {
+          return Array.from({ length: Math.round(settings.amount * .85) }, (_, index) => ({
+            x: ((index + .3) / (settings.amount * .85)) * width + between(-16, 16),
+            height: between(height * .28, height * .7),
+            width: between(2, 5),
+            phase: between(0, Math.PI * 2),
+            bend: between(18, 50),
+          }));
+        },
+        smoke() {
+          return Array.from({ length: Math.max(3, Math.round(settings.amount * .28)) }, (_, index) => ({
+            x: width * (.3 + (index / Math.max(1, Math.round(settings.amount * .28) - 1)) * .4) + between(-35, 35),
+            phase: between(0, Math.PI * 2),
+            scale: between(.65, 1.25),
+            drift: between(.55, 1.15),
+          }));
+        },
+        sunlight() {
+          return Array.from({ length: settings.amount }, () => ({
+            x: between(0, width),
+            y: between(0, height),
+            size: between(26, 120),
+            phase: between(0, Math.PI * 2),
+            speed: between(.22, .58),
+            alpha: between(.035, .11),
+          }));
+        },
+        petals() {
+          return Array.from({ length: settings.amount }, () => ({
+            x: between(0, width),
+            y: between(-height, height),
+            size: between(5, 15),
+            phase: between(0, Math.PI * 2),
+            fall: between(7, 18),
+            drift: between(8, 22),
+            rotation: between(0, Math.PI * 2),
+          }));
+        },
+        fireflies() {
+          return Array.from({ length: settings.amount }, () => ({
+            x: between(width * .08, width * .92),
+            y: between(height * .2, height * .84),
+            baseX: between(width * .08, width * .92),
+            baseY: between(height * .2, height * .84),
+            radius: between(1.2, 3.4),
+            phase: between(0, Math.PI * 2),
+            drift: between(8, 28),
+            glow: between(.35, .85),
+          }));
+        },
+        curtain() {
+          return Array.from({ length: Math.max(4, Math.round(settings.amount * .38)) }, (_, index) => ({
+            x: (index / Math.max(3, Math.round(settings.amount * .38) - 1)) * width,
+            width: between(80, 150),
+            phase: between(0, Math.PI * 2),
+            alpha: between(.035, .11),
+          }));
+        },
+      };
+
+      const renderers = {
+        flame(time, motion, theme) {
+          const floor = context.createLinearGradient(0, height * .65, 0, height);
+          floor.addColorStop(0, 'rgba(16, 18, 16, 0)');
+          floor.addColorStop(1, rgba(theme.shade, .42));
+          context.fillStyle = floor;
+          context.fillRect(0, 0, width, height);
+          for (const flame of objects) {
+            const flutter = Math.sin(time * flame.speed * motion + flame.phase) * flame.size * .15;
+            const flameHeight = flame.size * (1.25 + Math.sin(time * flame.speed * motion * 1.37 + flame.phase) * .13);
+            const glow = context.createRadialGradient(flame.x, flame.y - flameHeight * .24, 1, flame.x, flame.y - flameHeight * .18, flame.size * 1.45);
+            glow.addColorStop(0, rgba(theme.soft, .18));
+            glow.addColorStop(1, rgba(theme.primary, 0));
+            context.fillStyle = glow;
+            context.fillRect(flame.x - flame.size * 1.5, flame.y - flameHeight * 1.45, flame.size * 3, flameHeight * 1.7);
+            context.beginPath();
+            context.moveTo(flame.x, flame.y + flame.size * .25);
+            context.bezierCurveTo(flame.x - flame.size * .58, flame.y - flame.size * .03, flame.x - flame.size * .42 + flutter, flame.y - flameHeight * .72, flame.x + flutter, flame.y - flameHeight);
+            context.bezierCurveTo(flame.x + flame.size * .63 + flutter, flame.y - flameHeight * .58, flame.x + flame.size * .5, flame.y - flame.size * .05, flame.x, flame.y + flame.size * .25);
+            context.fillStyle = rgba(theme.primary, .38);
+            context.fill();
+            context.beginPath();
+            context.moveTo(flame.x, flame.y + flame.size * .16);
+            context.bezierCurveTo(flame.x - flame.size * .25, flame.y - flame.size * .16, flame.x + flutter * .55, flame.y - flameHeight * .56, flame.x + flutter * .48, flame.y - flameHeight * .62);
+            context.bezierCurveTo(flame.x + flame.size * .34, flame.y - flameHeight * .25, flame.x + flame.size * .25, flame.y - flame.size * .05, flame.x, flame.y + flame.size * .16);
+            context.fillStyle = rgba(theme.soft, .3);
+            context.fill();
+          }
+        },
+        bamboo(time, motion, theme) {
+          context.lineCap = 'round';
+          for (const bamboo of objects) {
+            const points = [];
+            for (let step = 0; step <= 10; step += 1) {
+              const progress = step / 10;
+              const y = height - bamboo.height * progress;
+              const x = bamboo.x + Math.sin(time * .48 * motion + bamboo.phase + progress * 2.2) * bamboo.height * .055 * progress * progress;
+              points.push({ x, y });
+            }
+            drawCurve(points, rgba(theme.primary, .36), bamboo.width);
+            for (const leaf of bamboo.leaves) {
+              const progress = leaf.progress;
+              const y = height - bamboo.height * progress;
+              const stemX = bamboo.x + Math.sin(time * .48 * motion + bamboo.phase + progress * 2.2) * bamboo.height * .055 * progress * progress;
+              const angle = leaf.side * (.55 + Math.sin(time * .6 * motion + bamboo.phase + progress * 4) * .16);
+              context.save();
+              context.translate(stemX, y);
+              context.rotate(angle);
+              context.beginPath();
+              context.moveTo(0, 0);
+              context.quadraticCurveTo(leaf.size * .58, -leaf.size * .12, leaf.size, 0);
+              context.quadraticCurveTo(leaf.size * .58, leaf.size * .16, 0, 0);
+              context.fillStyle = rgba(theme.soft, .17);
+              context.fill();
+              context.restore();
+            }
+          }
+        },
+        water(time, motion, theme) {
+          const reflection = context.createLinearGradient(0, height * .15, 0, height);
+          reflection.addColorStop(0, 'rgba(16, 18, 16, 0)');
+          reflection.addColorStop(1, rgba(theme.shade, .3));
+          context.fillStyle = reflection;
+          context.fillRect(0, 0, width, height);
+          context.lineCap = 'round';
+          for (const wave of objects) {
+            const points = [];
+            for (let x = -20; x <= width + 20; x += 22) {
+              points.push({ x, y: wave.y + Math.sin(x * wave.frequency + time * wave.speed * motion + wave.phase) * wave.amplitude + Math.sin(x * wave.frequency * .43 - time * wave.speed * .45 + wave.phase) * wave.amplitude * .42 });
+            }
+            drawCurve(points, rgba(theme.primary, wave.alpha), 1.1);
+          }
+          const moon = context.createRadialGradient(width * .7, height * .28, 0, width * .7, height * .28, Math.min(width, height) * .15);
+          moon.addColorStop(0, rgba(theme.soft, .1));
+          moon.addColorStop(1, rgba(theme.soft, 0));
+          context.fillStyle = moon;
+          context.fillRect(0, 0, width, height);
+        },
+        cloud(time, motion, theme) {
+          for (const cloud of objects) {
+            const x = ((cloud.x + time * cloud.speed * motion) % (width * 1.4)) - width * .2;
+            const y = cloud.y + Math.sin(time * .16 * motion + cloud.phase) * 18;
+            const size = 96 * cloud.scale;
+            const gradient = context.createRadialGradient(x, y, 0, x, y, size * 1.45);
+            gradient.addColorStop(0, rgba(theme.soft, cloud.alpha));
+            gradient.addColorStop(1, rgba(theme.primary, 0));
+            context.fillStyle = gradient;
+            context.beginPath();
+            context.ellipse(x - size * .28, y, size * .74, size * .32, 0, 0, Math.PI * 2);
+            context.ellipse(x + size * .22, y - size * .08, size * .66, size * .36, 0, 0, Math.PI * 2);
+            context.ellipse(x, y - size * .18, size * .52, size * .4, 0, 0, Math.PI * 2);
+            context.fill();
+          }
+        },
+        seaweed(time, motion, theme) {
+          const sand = context.createLinearGradient(0, height * .75, 0, height);
+          sand.addColorStop(0, 'rgba(16, 18, 16, 0)');
+          sand.addColorStop(1, rgba(theme.shade, .3));
+          context.fillStyle = sand;
+          context.fillRect(0, 0, width, height);
+          context.lineCap = 'round';
+          for (const plant of objects) {
+            const points = [];
+            for (let step = 0; step <= 12; step += 1) {
+              const progress = step / 12;
+              const y = height - plant.height * progress;
+              const x = plant.x + Math.sin(time * .62 * motion + plant.phase + progress * 2.8) * plant.bend * progress * progress;
+              points.push({ x, y });
+            }
+            drawCurve(points, rgba(theme.primary, .29), plant.width);
+            drawCurve(points.slice(3), rgba(theme.soft, .12), Math.max(1, plant.width * .32));
+          }
+        },
+        smoke(time, motion, theme) {
+          const baseY = height * .8;
+          context.lineCap = 'round';
+          for (const plume of objects) {
+            const points = [];
+            for (let step = 0; step <= 38; step += 1) {
+              const progress = step / 38;
+              const y = baseY - progress * height * .68 * plume.scale;
+              const x = plume.x + Math.sin(time * plume.drift * motion + plume.phase + progress * 8) * (12 + progress * 34) + Math.sin(progress * 19 - time * .38 * motion) * 8;
+              points.push({ x, y });
+            }
+            drawCurve(points, rgba(theme.soft, .15), 1.2 + plume.scale);
+            drawCurve(points.map((point, index) => ({ x: point.x + Math.sin(index) * 4, y: point.y })), rgba(theme.primary, .08), .8);
+            context.fillStyle = rgba(theme.muted, .42);
+            context.fillRect(plume.x - 1.5, baseY, 3, height * .08);
+          }
+        },
+        sunlight(time, motion, theme) {
+          context.save();
+          context.globalCompositeOperation = 'screen';
+          for (const light of objects) {
+            const x = light.x + Math.sin(time * light.speed * motion + light.phase) * 24;
+            const y = light.y + Math.cos(time * light.speed * .72 * motion + light.phase) * 17;
+            const gradient = context.createRadialGradient(x, y, 0, x, y, light.size);
+            gradient.addColorStop(0, rgba(theme.soft, light.alpha));
+            gradient.addColorStop(.38, rgba(theme.primary, light.alpha * .65));
+            gradient.addColorStop(1, rgba(theme.primary, 0));
+            context.fillStyle = gradient;
+            context.beginPath();
+            context.ellipse(x, y, light.size, light.size * .68, Math.sin(light.phase + time * .1) * .4, 0, Math.PI * 2);
+            context.fill();
+          }
+          context.restore();
+          context.strokeStyle = rgba(theme.muted, .08);
+          for (let index = 0; index < 12; index += 1) {
+            const y = height * .08 + index * height * .07;
+            context.beginPath();
+            context.moveTo(0, y + Math.sin(time * .25 * motion + index) * 8);
+            context.quadraticCurveTo(width * .5, y - 18, width, y + Math.cos(time * .2 + index) * 12);
+            context.stroke();
+          }
+        },
+        petals(time, motion, theme) {
+          for (const petal of objects) {
+            const y = (petal.y + time * petal.fall * motion) % (height + 50) - 25;
+            const x = petal.x + Math.sin(time * .48 * motion + petal.phase) * petal.drift + Math.sin(time * .12 + petal.phase) * 24;
+            const angle = petal.rotation + time * .36 * motion + Math.sin(time * .4 + petal.phase) * .35;
+            drawPetal(x, y, petal.size, angle, theme.soft, .33);
+            drawPetal(x + 1, y + 1, petal.size * .62, angle + .2, theme.primary, .12);
+          }
+        },
+        fireflies(time, motion, theme) {
+          context.save();
+          context.globalCompositeOperation = 'screen';
+          for (const firefly of objects) {
+            const x = firefly.baseX + Math.sin(time * .46 * motion + firefly.phase) * firefly.drift;
+            const y = firefly.baseY + Math.cos(time * .34 * motion + firefly.phase * 1.7) * firefly.drift * .52;
+            const pulse = .35 + (Math.sin(time * 1.18 * motion + firefly.phase) + 1) * .25;
+            const glow = context.createRadialGradient(x, y, 0, x, y, firefly.radius * 8);
+            glow.addColorStop(0, rgba(theme.soft, firefly.glow * pulse));
+            glow.addColorStop(.18, rgba(theme.primary, firefly.glow * pulse * .56));
+            glow.addColorStop(1, rgba(theme.primary, 0));
+            context.fillStyle = glow;
+            context.beginPath();
+            context.arc(x, y, firefly.radius * 8, 0, Math.PI * 2);
+            context.fill();
+          }
+          context.restore();
+        },
+        curtain(time, motion, theme) {
+          for (const panel of objects) {
+            const points = [];
+            for (let step = 0; step <= 22; step += 1) {
+              const progress = step / 22;
+              const y = progress * height;
+              const x = panel.x + Math.sin(time * .48 * motion + panel.phase + progress * 4) * (18 + progress * 14);
+              points.push({ x, y });
+            }
+            context.beginPath();
+            context.moveTo(points[0].x - panel.width * .5, 0);
+            for (const point of points) context.lineTo(point.x + panel.width * .5, point.y);
+            context.lineTo(points[points.length - 1].x - panel.width * .5, height);
+            for (let index = points.length - 1; index >= 0; index -= 1) context.lineTo(points[index].x - panel.width * .5, points[index].y);
+            context.closePath();
+            context.fillStyle = rgba(theme.primary, panel.alpha);
+            context.fill();
+            drawCurve(points, rgba(theme.soft, .12), .8);
+          }
+        },
+      };
+
+      function draw(timestamp) {
+        if (!lastFrame) lastFrame = timestamp;
+        const delta = Math.min(50, timestamp - lastFrame);
+        lastFrame = timestamp;
+        if (!reducedMotion.matches) elapsed += delta;
+        const time = elapsed / 1000;
+        const motion = settings.sway * .62;
+        const theme = palettes[settings.palette];
+        baseBackground(theme);
+        renderers[settings.scene](time, motion, theme);
+        requestAnimationFrame(draw);
+      }
+
+      function updateSettings() {
+        settings = {
+          scene: sceneSelect.value,
+          palette: paletteSelect.value,
+          amount: Number(amountInput.value),
+          sway: Number(swayInput.value),
+        };
+        syncControls();
+        saveSettings();
+        prepareScene();
+      }
+
+      sceneSelect.addEventListener('change', updateSettings);
+      paletteSelect.addEventListener('change', updateSettings);
+      amountInput.addEventListener('input', updateSettings);
+      swayInput.addEventListener('input', updateSettings);
+      regenerateButton.addEventListener('click', () => {
+        seed = createSeed();
+        prepareScene();
+      });
+      enterFullscreenButton.addEventListener('click', enterFullscreen);
+      exitFullscreenButton.addEventListener('click', exitFullscreen);
+      window.addEventListener('pointermove', (event) => {
+        if (event.pointerType === 'mouse') {
+          showControls();
+          hideControlsLater();
+        }
+      });
+      controls.addEventListener('pointerenter', showControls);
+      controls.addEventListener('pointerleave', hideControlsLater);
+      controls.addEventListener('focusin', showControls);
+      controls.addEventListener('focusout', hideControlsLater);
+      window.addEventListener('resize', resize);
+      document.addEventListener('fullscreenchange', syncFullscreenButtons);
+      document.addEventListener('fullscreenerror', syncFullscreenButtons);
+      reducedMotion.addEventListener?.('change', () => { lastFrame = 0; });
+      coarsePointer.addEventListener?.('change', applyControlsVisibility);
+
+      syncControls();
+      syncFullscreenButtons();
+      applyControlsVisibility();
+      resize();
+      requestAnimationFrame(draw);
+    })();
+  </script>
+</body>
+</html>
