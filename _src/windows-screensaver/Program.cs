@@ -1,5 +1,5 @@
-using System.Windows;
 using FormsScreen = System.Windows.Forms.Screen;
+using WpfApplication = System.Windows.Application;
 
 namespace GentleDrift.ScreenSaver;
 
@@ -49,7 +49,7 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        var app = new Application { ShutdownMode = ShutdownMode.OnLastWindowClose };
+        var app = new WpfApplication { ShutdownMode = System.Windows.ShutdownMode.OnLastWindowClose };
         var launch = ScreenSaverLaunch.Parse(args);
 
         if (launch.Mode == ScreenSaverLaunchMode.Configure)

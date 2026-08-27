@@ -99,7 +99,7 @@ internal sealed class ScreenSaverWindow : Window
         try
         {
             await ScreenSaverWebView.LoadAsync(_webView, screenSaverMode: !_isPreview);
-            _webView.AcceleratorKeyPressed += (_, _) => ExitScreenSaver();
+            _webView.CoreWebView2Controller.AcceleratorKeyPressed += (_, _) => ExitScreenSaver();
         }
         catch (WebView2RuntimeNotFoundException)
         {
