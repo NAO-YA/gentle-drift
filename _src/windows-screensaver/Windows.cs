@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -34,7 +35,7 @@ internal sealed class ConfigurationWindow : Window
         }
         catch (WebView2RuntimeNotFoundException)
         {
-            MessageBox.Show(
+            System.Windows.MessageBox.Show(
                 "Gentle Drift needs the Microsoft Edge WebView2 Runtime. Install it, then open this screen saver again.",
                 "Gentle Drift",
                 MessageBoxButton.OK,
@@ -98,7 +99,7 @@ internal sealed class ScreenSaverWindow : Window
         try
         {
             await ScreenSaverWebView.LoadAsync(_webView, screenSaverMode: !_isPreview);
-            _webView.CoreWebView2.AcceleratorKeyPressed += (_, _) => ExitScreenSaver();
+            _webView.AcceleratorKeyPressed += (_, _) => ExitScreenSaver();
         }
         catch (WebView2RuntimeNotFoundException)
         {
@@ -139,7 +140,7 @@ internal sealed class ScreenSaverWindow : Window
         }
 
         _cursorTimer.Stop();
-        Application.Current.Shutdown();
+        System.Windows.Application.Current.Shutdown();
     }
 
     private void AttachToPreviewWindow(object? sender, EventArgs e)
