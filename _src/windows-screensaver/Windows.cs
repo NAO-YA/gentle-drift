@@ -99,7 +99,6 @@ internal sealed class ScreenSaverWindow : Window
         try
         {
             await ScreenSaverWebView.LoadAsync(_webView, screenSaverMode: !_isPreview);
-            _webView.CoreWebView2Controller.AcceleratorKeyPressed += (_, _) => ExitScreenSaver();
         }
         catch (WebView2RuntimeNotFoundException)
         {
@@ -127,6 +126,12 @@ internal sealed class ScreenSaverWindow : Window
 
         var currentCursor = NativeMethods.GetCursorPosition();
         if (Math.Abs(currentCursor.X - _startingCursor.X) > 5 || Math.Abs(currentCursor.Y - _startingCursor.Y) > 5)
+        {
+            ExitScreenSaver();
+            return;
+        }
+
+        if (NativeMethods.IsAnyKeyPressed())
         {
             ExitScreenSaver();
         }
@@ -222,6 +227,9 @@ internal static class NativeMethods
     private static extern bool GetCursorPos(out POINT point);
 
     [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int virtualKey);
+
+    [DllImport("user32.dll")]
     internal static extern IntPtr SetParent(IntPtr childWindow, IntPtr newParent);
 
     [DllImport("user32.dll")]
@@ -245,6 +253,19 @@ internal static class NativeMethods
     internal static POINT GetCursorPosition()
     {
         return GetCursorPos(out var point) ? point : default;
+    }
+
+    internal static bool IsAnyKeyPressed()
+    {
+        for (var virtualKey = 1; virtualKey <= 254; virtualKey += 1)
+        {
+            if (((ushort)GetAsyncKeyState(virtualKey) & 0x8000) != 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     internal static IntPtr SetWindowLongPtr(IntPtr window, int index, IntPtr value)
